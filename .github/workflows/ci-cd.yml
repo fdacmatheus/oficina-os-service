@@ -87,11 +87,11 @@ jobs:
         run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
 
       - name: Secret (nao versionado)
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
+          # Segredos da plataforma (JWT, chave interna, admin): gerados pelo repositório
+          # oficina-fase4-infra no Secrets Manager. Nada disso fica no GitHub.
+          PLAT=$(aws secretsmanager get-secret-value --secret-id oficina/plataforma/segredos --query SecretString --output text)
+          jsonv() { echo "$PLAT" | jq -r ".$1"; }
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
           # Credenciais do banco vem do Secrets Manager criado pelo Terraform deste repo.
           aws secretsmanager get-secret-value --secret-id oficina/os/database \
@@ -102,9 +102,10 @@ jobs:
             --from-literal=DB_NAME="$(jq -r .DB_NAME /tmp/db.json)" \
             --from-literal=DB_USER="$(jq -r .DB_USER /tmp/db.json)" \
             --from-literal=DB_PASSWORD="$(jq -r .DB_PASSWORD /tmp/db.json)" \
-            --from-literal=JWT_SECRET="$JWT_SECRET" \
-            --from-literal=JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET" \
-            --from-literal=ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+            --from-literal=JWT_SECRET="$(jsonv JWT_SECRET)" \
+            --from-literal=JWT_REFRESH_SECRET="$(jsonv JWT_REFRESH_SECRET)" \
+            --from-literal=ADMIN_PASSWORD="$(jsonv ADMIN_PASSWORD)" \
+            --from-literal=INTERNAL_API_KEY="$(jsonv INTERNAL_API_KEY)" \
             --dry-run=client -o yaml | kubectl apply -f -
           rm -f /tmp/db.json
 

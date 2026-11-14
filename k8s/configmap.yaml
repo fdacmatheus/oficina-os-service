@@ -7,6 +7,11 @@ data:
   NODE_ENV: 'production'
   PORT: '3001'
   LOG_FORMAT: 'json'
+  # Traces e logs OTLP para o OpenTelemetry Collector do cluster (repositório de infra).
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'http://otel-collector.monitoring.svc.cluster.local:4318'
+  OTEL_SERVICE_NAME: 'os-service'
+  # Prefixo do serviço no API Gateway, para o "Try it out" do Swagger funcionar.
+  SWAGGER_PREFIXO: '/os'
   AWS_REGION: 'us-east-1'
   DB_SSL: 'true'
   DB_MIGRATIONS_RUN: 'true'

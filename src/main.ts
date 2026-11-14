@@ -55,7 +55,8 @@ async function bootstrap() {
       'ordens-servico-publico',
       'Consulta pública de status e histórico pelo número (sem JWT)',
     )
-    .addServer('/', 'Ambiente atual')
+    // Atrás do API Gateway o serviço fica sob um prefixo (/os, /billing, /execution).
+    .addServer(process.env.SWAGGER_PREFIXO ?? '/', 'Ambiente atual')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
