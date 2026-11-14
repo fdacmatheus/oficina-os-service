@@ -1,0 +1,21 @@
+import { config as loadEnv } from 'dotenv';
+import { DataSource } from 'typeorm';
+
+loadEnv({ path: '.env' });
+
+export const AppDataSource = new DataSource({
+  type: 'postgres',
+  host: process.env.DB_HOST ?? 'localhost',
+  port: Number(process.env.DB_PORT ?? 5433),
+  username: process.env.DB_USER ?? 'os',
+  password: process.env.DB_PASSWORD ?? 'os',
+  database: process.env.DB_NAME ?? 'os',
+  entities: ['src/**/*.orm-entity.ts'],
+  migrations: ['src/shared/database/migrations/*.ts'],
+  synchronize: false,
+
+  // O RDS exige TLS. O certificado e emitido por CA propria da AWS, entao a
+  // verificacao da cadeia fica desativada em vez de embarcar o bundle de
+  // certificados da Amazon apenas para rodar migrations.
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+});

@@ -1,0 +1,123 @@
+name: CI/CD · os-service
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: oficina-os-service
+  EKS_CLUSTER: oficina-eks
+  NAMESPACE: oficina
+  NODE_VERSION: 22
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    name: Lint, testes, segredos e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # o gitleaks varre o historico
+
+      - uses: pnpm/action-setup@v4 # versao lida de packageManager no package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Testes unitarios e BDD com cobertura (minimo 95%)
+        run: pnpm test:cov
+
+      - name: Build
+        run: pnpm build
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Docker build
+        run: docker build -t "$ECR_REPOSITORY:${{ github.sha }}" .
+
+  deploy:
+    name: ECR + EKS
+    needs: qualidade
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    environment: producao
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Build e push da imagem (tag = SHA)
+        id: imagem
+        run: |
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 \
+            || aws ecr create-repository --repository-name "$ECR_REPOSITORY" \
+                 --image-scanning-configuration scanOnPush=true >/dev/null
+          IMAGEM="${{ steps.ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}"
+          docker build -t "$IMAGEM" .
+          docker push "$IMAGEM"
+          echo "imagem=$IMAGEM" >> "$GITHUB_OUTPUT"
+
+      - name: Configurar o kubectl
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+      - name: Secret (nao versionado)
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          # Credenciais do banco vem do Secrets Manager criado pelo Terraform deste repo.
+          aws secretsmanager get-secret-value --secret-id oficina/os/database \
+            --query SecretString --output text > /tmp/db.json
+          kubectl -n "$NAMESPACE" create secret generic oficina-os-secrets \
+            --from-literal=DB_HOST="$(jq -r .DB_HOST /tmp/db.json)" \
+            --from-literal=DB_PORT="$(jq -r .DB_PORT /tmp/db.json)" \
+            --from-literal=DB_NAME="$(jq -r .DB_NAME /tmp/db.json)" \
+            --from-literal=DB_USER="$(jq -r .DB_USER /tmp/db.json)" \
+            --from-literal=DB_PASSWORD="$(jq -r .DB_PASSWORD /tmp/db.json)" \
+            --from-literal=JWT_SECRET="$JWT_SECRET" \
+            --from-literal=JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET" \
+            --from-literal=ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm -f /tmp/db.json
+
+      - name: Aplicar manifestos
+        run: |
+          # As URLs das filas levam o ID da conta.
+          CONTA=$(aws sts get-caller-identity --query Account --output text)
+          IMAGEM="${{ steps.imagem.outputs.imagem }}"
+          sed -i "s|/000000000000/|/$CONTA/|g" k8s/configmap.yaml
+          # O placeholder e trocado antes do apply para nunca subir pod sem imagem.
+          sed -i "s|IMAGEM_PLACEHOLDER|$IMAGEM|g" k8s/deployment.yaml
+          kubectl apply -f k8s/
+          kubectl -n "$NAMESPACE" set image deployment/oficina-os-service api="$IMAGEM"
+
+      - name: Aguardar o rollout
+        run: kubectl -n "$NAMESPACE" rollout status deployment/oficina-os-service --timeout=5m

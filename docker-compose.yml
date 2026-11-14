@@ -1,0 +1,26 @@
+# Sobe só a API. A infra (Floci, Postgres do os-service e MailHog) vem do compose
+# compartilhado em ../local (projeto oficina-local), cuja rede é usada como externa.
+name: oficina-os
+
+services:
+  api:
+    build: .
+    ports: ['3001:3001']
+    env_file: [.env]
+    environment:
+      PORT: 3001
+      LOG_FORMAT: json
+      DB_HOST: postgres-os
+      DB_PORT: 5432
+      AWS_ENDPOINT_URL: http://floci:4566
+      SQS_OS_EVENTOS_URL: http://floci:4566/000000000000/os-eventos
+      SQS_BILLING_COMANDOS_URL: http://floci:4566/000000000000/billing-comandos
+      SQS_EXECUTION_COMANDOS_URL: http://floci:4566/000000000000/execution-comandos
+      SMTP_HOST: mailhog
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    networks: [oficina-local]
+
+networks:
+  oficina-local:
+    name: oficina-local_default
+    external: true

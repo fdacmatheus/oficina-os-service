@@ -1,0 +1,3 @@
+bucket = "oficina-terraform-state-<conta>"
+key    = "oficina-os-service/terraform.tfstate"
+region = "us-east-1"

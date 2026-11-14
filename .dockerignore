@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.git
+.github
+.env
+.env.*
+*.log
+README.md
+postman
+infra
+k8s
+**/*.spec.ts
+Dockerfile
+docker-compose.yml
+.dockerignore

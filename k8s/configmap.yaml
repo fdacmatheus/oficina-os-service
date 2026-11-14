@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-os-config
+  namespace: oficina
+data:
+  NODE_ENV: 'production'
+  PORT: '3001'
+  LOG_FORMAT: 'json'
+  AWS_REGION: 'us-east-1'
+  DB_SSL: 'true'
+  DB_MIGRATIONS_RUN: 'true'
+  AUTO_SEED: 'true'
+  # O pipeline troca 000000000000 pelo ID da conta antes do apply.
+  SQS_OS_EVENTOS_URL: 'https://sqs.us-east-1.amazonaws.com/000000000000/os-eventos'
+  SQS_BILLING_COMANDOS_URL: 'https://sqs.us-east-1.amazonaws.com/000000000000/billing-comandos'
+  SQS_EXECUTION_COMANDOS_URL: 'https://sqs.us-east-1.amazonaws.com/000000000000/execution-comandos'
+  SQS_CONSUMER_ENABLED: 'true'
+  OUTBOX_PUBLICADOR_ENABLED: 'true'
+  # Sem SMTP real no cluster: a falha de envio vira métrica
+  # (oficina_integracao_falhas_total) e não bloqueia a saga.
+  SMTP_HOST: 'localhost'
+  SMTP_PORT: '1025'
+  SMTP_FROM: 'oficina@oficina.com'
+# O Secret oficina-os-secrets (DB_*, JWT_SECRET, JWT_REFRESH_SECRET, ADMIN_PASSWORD)
+# NAO e versionado: o pipeline o monta a partir do Secrets Manager e dos secrets do GitHub.
+# Credenciais AWS vem do perfil da instancia dos nodes (LabRole no AWS Academy).

@@ -1,0 +1,20 @@
+allowBuilds:
+  "@parcel/watcher": false
+  "@scarf/scarf": false
+  "@nestjs/core": false
+  "unrs-resolver": false
+  "better-sqlite3": false
+  "protobufjs": false
+
+# Correções de vulnerabilidade herdadas da fase 3.
+overrides:
+  "glob": ">=10.5.0"
+  "multer": ">=2.1.1"
+  "js-yaml": ">=4.1.1"
+  "picomatch": ">=4.0.4"
+  "ajv": ">=8.18.0"
+  "@eslint/eslintrc>ajv": "^6.12.6"
+  "eslint>ajv": "^6.12.6"
+  "tmp": ">=0.2.4"
+  "webpack": ">=5.104.1"
+  "file-type": ">=21.3.2"
