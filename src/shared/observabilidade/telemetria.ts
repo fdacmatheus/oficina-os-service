@@ -1,4 +1,11 @@
-import { context, propagation, ROOT_CONTEXT, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import {
+  context,
+  propagation,
+  ROOT_CONTEXT,
+  SpanKind,
+  SpanStatusCode,
+  trace,
+} from '@opentelemetry/api';
 import { suppressTracing } from '@opentelemetry/core';
 
 const tracer = trace.getTracer('oficina');

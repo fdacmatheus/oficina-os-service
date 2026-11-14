@@ -86,4 +86,9 @@ describe('ClientesService', () => {
     await expect(service.delete('c-2')).rejects.toBeInstanceOf(NotFoundException);
     expect(repo.delete.mock.calls).toEqual([['c-1']]);
   });
+  it('findByDocumento normaliza a máscara antes de buscar', async () => {
+    repo.findByDocumento.mockResolvedValue(null);
+    expect(await service.findByDocumento('529.982.247-25')).toBeNull();
+    expect(repo.findByDocumento).toHaveBeenLastCalledWith('52998224725');
+  });
 });
