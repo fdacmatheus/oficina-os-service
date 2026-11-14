@@ -22,9 +22,9 @@ data:
   SQS_EXECUTION_COMANDOS_URL: 'https://sqs.us-east-1.amazonaws.com/000000000000/execution-comandos'
   SQS_CONSUMER_ENABLED: 'true'
   OUTBOX_PUBLICADOR_ENABLED: 'true'
-  # Sem SMTP real no cluster: a falha de envio vira métrica
-  # (oficina_integracao_falhas_total) e não bloqueia a saga.
-  SMTP_HOST: 'localhost'
+  # MailHog do cluster (repositório de infra): caixa de entrada de teste. Se o
+  # envio falhar, vira métrica (oficina_integracao_falhas_total) e não bloqueia a saga.
+  SMTP_HOST: 'mailhog.oficina.svc.cluster.local'
   SMTP_PORT: '1025'
   SMTP_FROM: 'oficina@oficina.com'
 # O Secret oficina-os-secrets (DB_*, JWT_SECRET, JWT_REFRESH_SECRET, ADMIN_PASSWORD)
