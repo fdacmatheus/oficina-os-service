@@ -28,6 +28,11 @@ export class ClientesService {
     return this.repository.findAll();
   }
 
+  /** Busca pelo CPF/CNPJ (com ou sem máscara); `null` se não existir. */
+  async findByDocumento(documento: string): Promise<Cliente | null> {
+    return this.repository.findByDocumento(documento.replace(/\D/g, ''));
+  }
+
   async findById(id: string): Promise<Cliente> {
     const cliente = await this.repository.findById(id);
     if (!cliente) {
