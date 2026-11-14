@@ -38,9 +38,10 @@ export function isValidCnpj(cnpj: string): boolean {
 
   const calcCheck = (slice: string, factors: number[]): number => {
     let total = 0;
-    for (let i = 0; i < slice.length; i++) {
-      total += parseInt(slice[i], 10) * factors[i];
-    }
+    // O laço percorre a lista fixa de pesos, nunca o tamanho da entrada.
+    factors.forEach((peso, i) => {
+      total += parseInt(slice[i], 10) * peso;
+    });
     const rest = total % 11;
     return rest < 2 ? 0 : 11 - rest;
   };
